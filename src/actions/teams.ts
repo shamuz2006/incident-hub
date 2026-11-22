@@ -124,7 +124,8 @@ export const revokeInvite = defineAction(
  * your existing role).
  */
 export const joinTeam = defineAction(
-  z.object({ code: z.string().trim().regex(/^[a-z0-9]{6,40}$/, 'Invalid invite code') }),
+  // Lowercase before checking, so a code pasted in uppercase still works.
+  z.object({ code: z.string().trim().toLowerCase().regex(/^[a-z0-9]{6,40}$/, 'Invalid invite code') }),
   async ({ userId, params, tools }) => {
     const [invite] = await queryRecords<Invite>(tools, 'invites', { code: params.code }, 1)
     const expired = invite?.data.expiresAt && Date.parse(invite.data.expiresAt) <= Date.now()

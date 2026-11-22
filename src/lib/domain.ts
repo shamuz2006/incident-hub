@@ -101,6 +101,8 @@ export function incidentKey(number: number): string {
 }
 
 // ── Record shapes (the `.data` part of each record envelope) ────────────────
+// Note: boolean columns are stored as numbers, so they read back as 0/1.
+// Always test them for truthiness (`if (team.slackConfigured)`), never `=== true`.
 
 export interface Team {
   teamId: string

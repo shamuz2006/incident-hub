@@ -4,6 +4,23 @@ Major changes, newest first. Each entry says what changed, where, and how it was
 
 ---
 
+## 2026-11-22: Error-handling tests for teams (Phase 1b)
+New testing standard: every feature is tested for its basic functionality *and* for invalid input and human error. This adds to the existing tests.
+- **New spec `tests/team-errors.spec.ts` (8 tests):**
+  - **Invalid input:** bad team names (empty, blank, too short or long, wrong type), a bad invite role or expiry, a malformed id (`../x`), a non-`xoxb-` Slack token, and a bad GitHub owner. Each is rejected with `invalid_input`, and the test confirms nothing changed.
+  - **Malformed requests:** an unknown action gives 404. A broken JSON body gives 400 with `invalid_input`, and the server keeps working afterwards.
+  - **Human mistakes:** a garbage or revoked invite code gives `not_found` with a readable message. An uppercase code is accepted. The only commander can't demote themselves or leave (`conflict`, role unchanged). After Bob is removed, he can neither read nor act.
+  - **UI:**
+    - An empty team name shows an inline error and sends no request.
+    - A bad invite code shows the server's message.
+    - `/join/<bad>` shows a friendly page with a link back.
+    - When the only commander tries to demote themselves, a toast appears and the role dropdown snaps back.
+- **Bugs found and fixed:**
+  1. `src/server/action-routes.ts`: a malformed JSON body crashed the route with a 500. It now returns 400 `invalid_input`.
+  2. `src/actions/teams.ts`: `joinTeam` checked the code's format before lowercasing it, so a pasted uppercase code was rejected. It now lowercases first.
+- **Note:** boolean columns read back as `0`/`1`. There's a comment about this in `src/lib/domain.ts`.
+- **Verified:** `tsc` and `eslint` are clean. `npx deepspace test run all` passes 6 unit and 21 Playwright tests, run twice in a row.
+
 ## 2026-11-22: Team UI (Phase 1 complete)
 - **Theme:** the "Ops" dark theme (`src/themes.css`, set active in `index.html`). Severity tokens `sev1`–`sev4` are red, orange, yellow, and blue (`src/styles.css`). Fonts are Inter and JetBrains Mono.
 - **Routing (Design D15):**
