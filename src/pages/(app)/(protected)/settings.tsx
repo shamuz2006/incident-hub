@@ -1,41 +1,79 @@
 /**
- * Example gated page. Reached at /settings — no auth logic lives here
- * because (protected)/_layout.tsx already wraps the subtree in <AuthGate>.
+ * User settings: profile, team memberships, and account actions.
+ * (GitHub connection for issue creation is added with the GitHub integration.)
  */
 
+import { Link } from 'react-router-dom'
 import { signOut, useUser } from 'deepspace'
 import { Button } from '@/components/ui'
+import { RoleBadge } from '../../../components/badges'
+import { EmptyBlock, LoadingBlock } from '../../../components/states'
+import { teamPath } from '../../../lib/navigation'
+import { useMyTeams } from '../../../lib/team-context'
 
 export default function SettingsPage() {
   const { user } = useUser()
+  const { teams, memberships, status } = useMyTeams()
+  const roleByTeam = new Map(memberships.map((m) => [m.data.teamId, m.data.role]))
 
   return (
-    // No background on page wrappers — pages render into whatever the app's
-    // (app)/_layout provides (a plain background, or a raised panel), so they
-    // stay transparent and inherit it.
-    <div className="min-h-full text-foreground">
-      <div className="mx-auto max-w-2xl px-6 py-20">
-        <h1 className="mb-12 text-4xl font-bold tracking-tight">Settings</h1>
+    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
+      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
 
-        <section className="rounded-lg border border-border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold">Your account</h2>
+      <section className="rounded-lg border border-border bg-card p-5">
+        <h2 className="mb-4 font-semibold">Profile</h2>
+        <dl className="grid gap-4 text-sm sm:grid-cols-2">
+          <div>
+            <dt className="text-muted-foreground">Name</dt>
+            <dd>{user?.name || '—'}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Email</dt>
+            <dd>{user?.email || '—'}</dd>
+          </div>
+        </dl>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Your name and avatar come from the account you signed in with (GitHub or Google).
+        </p>
+      </section>
 
-          <dl className="space-y-3 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Name</dt>
-              <dd className="text-foreground">{user?.name ?? '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Email</dt>
-              <dd className="text-foreground">{user?.email ?? '—'}</dd>
-            </div>
-          </dl>
+      <section className="rounded-lg border border-border bg-card p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-semibold">Your teams</h2>
+          <Link to="/onboarding" className="text-sm text-primary hover:underline">
+            Create or join a team
+          </Link>
+        </div>
+        {status === 'loading' ? (
+          <LoadingBlock className="py-4" />
+        ) : teams.length === 0 ? (
+          <EmptyBlock title="You're not in a team yet" />
+        ) : (
+          <ul className="divide-y divide-border">
+            {teams.map((t) => {
+              const role = roleByTeam.get(t.data.teamId)
+              return (
+                <li key={t.recordId} className="flex items-center gap-3 py-2.5">
+                  <Link to={teamPath(t.data.teamId)} className="flex-1 text-sm font-medium hover:text-primary">
+                    {t.data.name}
+                  </Link>
+                  {role && <RoleBadge role={role} />}
+                  <Link to={teamPath(t.data.teamId, 'team')} className="text-xs text-muted-foreground hover:text-foreground">
+                    Manage
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
 
-          <Button variant="secondary" className="mt-6" onClick={() => signOut()}>
-            Sign out
-          </Button>
-        </section>
-      </div>
+      <section className="rounded-lg border border-border bg-card p-5">
+        <h2 className="mb-2 font-semibold">Account</h2>
+        <Button variant="secondary" onClick={() => signOut()}>
+          Sign out
+        </Button>
+      </section>
     </div>
   )
 }

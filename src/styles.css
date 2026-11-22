@@ -59,6 +59,16 @@
   --color-info: #3b82f6;
   --color-info-foreground: #ffffff;
 
+  /* IncidentHub severity palette — constant across themes so SEV colors
+     always mean the same thing. Used as bg-sev1/text-sev1/border-sev1 etc. */
+  --color-sev1: #ef4444;
+  --color-sev2: #f97316;
+  --color-sev3: #eab308;
+  --color-sev4: #60a5fa;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
   /*
    * Shadows — slate (default). Each theme in themes.css tunes these.
    *

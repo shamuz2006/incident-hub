@@ -18,6 +18,11 @@
 
 export const THEMES = [
   {
+    id: 'ops',
+    label: 'Ops',
+    description: 'IncidentHub default — dark graphite operations dashboard.',
+  },
+  {
     id: 'slate',
     label: 'Slate',
     description: 'Neutral dark placeholder default. Replace with your own theme.',

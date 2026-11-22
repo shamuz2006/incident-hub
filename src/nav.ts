@@ -16,7 +16,8 @@ export interface NavItem {
 }
 
 export const nav: NavItem[] = [
-  { path: '/home', label: 'Home' },
+  // Team pages (Incidents, Team) are linked from the team sub-nav in
+  // src/pages/(app)/(protected)/t/[teamId]/_layout.tsx.
   { path: '/settings', label: 'Settings' },
   // The /api-status debug page still exists — add
   // `{ path: '/api-status', label: 'API Status', devOnly: true }` to surface it.

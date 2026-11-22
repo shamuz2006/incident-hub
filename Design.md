@@ -1,0 +1,173 @@
+# IncidentHub — Design Decisions
+
+The important design decisions, each with its alternatives and tradeoffs. Newest last.
+Status values: **Accepted** (in effect), **Superseded** (replaced by a later decision), **Proposed** (still waiting on a choice).
+
+---
+
+## D1. Source control authority: GitHub
+**Date:** 2026-11-22 · **Status:** Accepted
+
+**Context.** DeepSpace locks every app to exactly one source of truth, permanently, on its first deploy or push. The submission requires a GitHub repo URL.
+
+| Option | Pros | Cons |
+|---|---|---|
+| **GitHub source** (chosen) | The repo you submit is the real source. Uses the normal `git push` workflow. Reviewers can read it. | `deploy` ships your local files and never pushes, so pushing is on you. `deepspace push/pull/workspace` stop working. |
+| DeepSpace cloud repo | Deploy and source live in one place, with commit-pinned releases. | You'd have to mirror to GitHub by hand, which means two sources of truth. |
+
+**Decision.** GitHub (`shamuz2006/incident-hub`). Never run `npx deepspace push`: it would claim DeepSpace source instead, and the only way back is a new app id.
+
+---
+
+## D2. Team isolation: one record room, with row-level team rules
+**Date:** 2026-11-22 · **Status:** Accepted
+
+**Context.** Each team's data must be invisible to other teams.
+
+| Option | Pros | Cons |
+|---|---|---|
+| **One room, `teamField` + `'team'` read rule** (chosen) | A documented SDK feature. The server filters rows before broadcasting them. One connection per user. Simple. | Every collection needs a `teamId` column. A bug in one schema could leak rows, so a unit test checks every schema. |
+| One room per team (`team:<id>`) | Rooms are physically separate. Each team gets its own role table. | Authorizing access to a room needs custom WebSocket gating, which the docs don't cover. Several connections per user. More code to explain. |
+
+**Decision.** One room with row-level rules. `tests/isolation.spec.ts` verifies it: a non-member receives zero rows and every write they attempt is rejected.
+
+---
+
+## D3. All writes go through server actions; clients only read
+**Date:** 2026-11-22 · **Status:** Accepted
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Server actions for every mutation** (chosen) | One place for role checks, validation, and timeline events. Clients can't fake their identity or role. A state change and its event are written together. | Each write is an HTTP round trip, with no instant client-side update. More action code. |
+| Direct client writes, with collection permissions | Instant updates. Less code. | Collection permissions only know `viewer/member/admin` and `own/team`. They can't express commander vs responder, and they can't append a timeline event for you. |
+
+**Decision.** Every collection has `create/update/delete: false` for every role. Changes still reach everyone in real time, because writes made by actions are broadcast to subscribers.
+
+---
+
+## D4. Roles are per team, stored in `team_members.role`
+**Date:** 2026-11-22 · **Status:** Accepted
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Per-team role column** (chosen) | You can be a commander on one team and an observer on another. The role is read from the database inside each action. | We enforce it ourselves in `requireTeamRole`, not the SDK. |
+| DeepSpace app-level roles (`viewer/member/admin`) | Built in. | One role per user for the whole app, so it can't vary by team. |
+
+**Decision.** `commander > responder > observer`, checked with `hasTeamRole` (`src/lib/domain.ts`) and `requireTeamRole` (`src/actions/lib.ts`).
+
+---
+
+## D5. Append-only timeline with idempotent events
+**Date:** 2026-11-22 · **Status:** Accepted
+
+**Context.** The SDK has no transactions across several records, and the client may retry a request.
+
+| Option | Pros | Cons |
+|---|---|---|
+| **A separate `incident_events` collection; event id = `evt_<opId>`** (chosen) | A retry can't create a duplicate event. History is kept apart from current state. Nothing ever updates or deletes an event. | If an action fails between writing the state and writing the event, the event is missing until someone replays the action. |
+| Store history inside the incident record | One write per change. | Concurrent updates overwrite each other. The record grows without limit. |
+
+**Decision.** The state record is written first, then the event. Retrying with the same `opId` fills in a missing event. This limitation is documented.
+
+---
+
+## D6. Concurrent edits: optimistic version check
+**Date:** 2026-11-22 · **Status:** Accepted (implemented in Phase 2)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **`version` number; updates send `expectedVersion`** (chosen) | Edits are never silently overwritten. Easy to explain. | The person who loses the race sees "someone changed this, reload". |
+| Last write wins | Simplest. | Silently loses edits, which the PRD rules out. |
+| Yjs / CRDT fields | Merges edits automatically. | Overkill for status and severity fields, and harder to explain. |
+
+The read-check-write isn't atomic across separate tool calls. The window is small, and this limitation is documented.
+
+---
+
+## D7. Where integration credentials live
+**Date:** 2026-11-22 · **Status:** Accepted
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Slack bot token per team, in the `team_secrets` collection, which no client can read** (chosen) | Each team configures its own Slack. The token never reaches a browser. | It's stored in the app database rather than DeepSpace's secret store. |
+| One app-wide `SLACK_BOT_TOKEN` in `deepspace secrets` | Uses the platform secret store. | Every team posts to the same workspace, and changing it needs a redeploy. |
+
+OpenAI and Composio go through DeepSpace's platform proxy, so there are no keys in the app.
+
+---
+
+## D8. GitHub issue creation via Composio
+**Date:** 2026-11-22 · **Status:** Accepted (chosen by the user)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Composio (`composio/execute-tool`, `GITHUB_CREATE_AN_ISSUE`)** (chosen) | A documented DeepSpace catalog integration. Issues are opened by the user who clicks, not a bot. | Each commander has to connect GitHub once through a consent screen. |
+| A personal access token in a secret, plus a direct `fetch` to GitHub | Predictable, with no per-user connection. | Not a DeepSpace integration. One token acts for everyone. |
+
+---
+
+## D9. What runs asynchronously
+**Date:** 2026-11-22 · **Status:** Accepted
+
+| Work | Where | Why |
+|---|---|---|
+| AI summary and postmortem generation | Background job (`src/jobs.ts`), up to 3 attempts | Slow (seconds), so it shouldn't block the UI. Status is written onto the report record so every viewer sees progress. |
+| Slack notification | Background job | A Slack failure shouldn't fail the action that triggered it. |
+| GitHub issue creation | Inside the server action | Composio has to run as the user who clicked. The call is short, and the user wants the link right away. |
+
+---
+
+## D10. Invite codes are server-only
+**Date:** 2026-11-22 · **Status:** Accepted
+
+| Option | Pros | Cons |
+|---|---|---|
+| **No client can read invites; commanders list them through an action** (chosen) | An observer can't see and pass on a commander-level invite code. | One extra action. |
+| Every team member can read invites | They'd update live with no extra action. | Leaks codes to every member. |
+
+---
+
+## D11. The team roster comes from `team_members`, not `users`
+**Date:** 2026-11-22 · **Status:** Accepted
+
+Each member's name, email, and avatar are copied into their membership row when they join. **Pro:** the roster respects team isolation, because the app-wide `users` list would expose people across teams. **Con:** if someone changes their profile name later, the copy goes stale until they rejoin.
+
+---
+
+## D12. After joining a team, reload the subscriptions
+**Date:** 2026-11-22 · **Status:** Accepted (found by testing)
+
+**Finding.** The record room re-checks a subscription only when a row *changes*. So when you gain access to a team, rows that already existed aren't pushed to your open page. The isolation test showed this.
+**Decision.** After a successful join, the app navigates to the dashboard, which re-mounts the queries. The alternative was writing to every team row after each join to force a push; we rejected it as a wasteful hack.
+
+---
+
+## D13. Incident numbers (INC-1, INC-2…)
+**Date:** 2026-11-22 · **Status:** Accepted (implemented in Phase 2)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **A per-team counter, plus `uniqueOn: ['teamId','number']`, retrying on collision** (chosen) | Short, human-friendly numbers. The database rejects duplicates if two creates race. | A little retry logic. |
+| Show the record id | No logic needed. | Ugly ids that are hard to say out loud in an incident call. |
+
+---
+
+## D14. Removing a member is a soft delete
+**Date:** 2026-11-22 · **Status:** Accepted
+
+The member's `status` is set to `removed` rather than deleting the row. Access ends immediately, because the room only honors `active` rows. Their name stays attached to past findings and comments, and they can rejoin through a new invite.
+
+---
+
+## D15. Current team comes from the URL
+**Date:** 2026-11-22 · **Status:** Accepted (chosen by the user)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Team in the URL: `/t/:teamId/...`** (chosen) | Links are shareable and unambiguous, so Slack and GitHub links open the right team. Two tabs can show two teams. Safe across refreshes. | Longer routes. Every page reads the `teamId` param. |
+| Active team kept in localStorage, with a switcher | Short URLs. | Shared links can open in the wrong team. Two tabs fight over one setting. |
+| One team per user | Least code. | Contradicts the PRD's "create or join teams" and can't demonstrate multi-team isolation. |
+
+**Routes.** `/t/:teamId/dashboard`, `/t/:teamId/incidents/:incidentId`, `/t/:teamId/incidents/:incidentId/postmortem`, and `/t/:teamId/team` are team-scoped. `/settings`, `/onboarding`, and `/join/:code` are user-level. `/home` sends you to your first team, or to onboarding if you have none.
+
+The URL only picks which team to *show*. It grants nothing: the server still checks membership on every read and write.
