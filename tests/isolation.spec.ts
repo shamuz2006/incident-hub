@@ -19,7 +19,12 @@ async function visibleCount(page: Page, collection: string, teamId: string) {
 
 test('teams are isolated: non-members can neither read nor write', async ({ users }) => {
   const [alice, bob, carol] = await users(['Alice', 'Bob', 'Carol'])
-  for (const u of [alice, bob, carol]) await u.page.goto('/debug-records')
+  for (const u of [alice, bob, carol]) {
+    await u.page.goto('/debug-records')
+    // Wait until the live subscription is established before changing data;
+    // otherwise (with real network latency) a change can race the initial load.
+    await expect(u.page.getByTestId('debug-teams')).toHaveAttribute('data-status', 'ready', { timeout: 15_000 })
+  }
 
   const { teamId } = await actOk<{ teamId: string }>(alice.page, 'createTeam', { name: 'Isolation Test Team' })
 

@@ -4,6 +4,23 @@ Major changes, newest first. Each entry says what changed, where, and how it was
 
 ---
 
+## 2026-11-24: First deploy, live at https://incident-hub.app.space
+- `npx deepspace status` confirmed `sourceInference: github` and a clean tree. The deploy then claimed GitHub `shamuz2006/incident-hub` as the source (Design D1) and confirmed both the edge and the data plane.
+- **HTTP smoke test of the live site:**
+  - The landing page, `/home`, and app routes return 200, and unknown routes are handled by the app's own 404 page.
+  - `/api/auth/ok` returns 200, and an unauthenticated action returns 401.
+  - The `noindex` meta tag is present, and there's no sitemap.
+- **Browser tests against the live site:** added `tests/playwright.prod.config.ts` and `npm run test:prod`. These pass on the live site, twice in a row for the demo flow:
+  - the two-browser war-room demo;
+  - the dashboard filters;
+  - all four war-room error tests;
+  - the team invite UI flow.
+- **Findings:**
+  1. `/debug-records` is disabled in production by design, so specs that read raw rows from it (isolation, incidents, team-errors) run locally only. They test the same server code.
+  2. **SDK bug.** `notifyTeamMembershipChange` in `deepspace/worker` reads `record.data.UserId` (capital U), so a user is never told to refresh when their membership changes. That's the root cause of Design D12. The app works around it by doing a full page load after a join.
+  3. On the very first run, the live demo showed Bob as "Former member" on Alice's screen. It hasn't come back in 3 runs since. The likely cause is that a brand-new account's first live connection is set up before the account is registered. Real users always reload after creating or joining a team, which reconnects them. This is a known limitation to document, and it's not fully proven.
+  4. Test hygiene: `tests/isolation.spec.ts` now waits until the page's live subscription is ready before changing data, so a change can't race the initial load.
+
 ## 2026-11-24: Keep the app out of search results
 - `src/seo.ts`: `noindex: true`. The production build's landing page now carries `<meta name="robots" content="noindex, nofollow">`, and no sitemap is published.
 - This doesn't change access. Anyone with the URL can still open the app, and sign-in and team isolation work the same.
