@@ -4,6 +4,70 @@ Major changes, newest first. Each entry says what changed, where, and how it was
 
 ---
 
+## 2026-11-24: Integrations: AI summary, Slack, AI postmortem, GitHub issues (Phase 4)
+- **Design decisions D22–D25 (chosen by the user):**
+  - D22: responders and commanders can generate AI summaries.
+  - D23: postmortems are edited as a section form, one editor at a time.
+  - D24: only the latest summary is kept, with its age shown.
+  - D25: Slack alerts on declared, escalated to Critical, and resolved.
+- **Background jobs** (`src/jobs.ts` and `src/jobs/*`):
+  - **Types:** `ai-summary`, `ai-postmortem`, and `slack-notify`. Each makes up to 3 attempts, 2 seconds apart.
+  - **Status:** each job writes its progress onto a team-scoped record (`ai_reports`, `postmortems`, `notifications`), so every viewer sees it live. Only the final failed attempt shows as "failed"; earlier ones show "retrying".
+  - **Who can enqueue:** only server actions, after their role checks. `worker.ts` now denies browsers any access to the job room. Before this, any signed-in user could enqueue jobs (found in Phase 3).
+  - **Tooling:** jobs reuse `createActionTools`, now exported from `src/server/action-routes.ts`, running as the app owner.
+- **AI grounding** (`src/ai/*`):
+  - `incident-context.ts` gives every record a citation ref (F = finding, E = timeline event, T = task, C = discussion message).
+  - `summary.ts` and `postmortem.ts` hold the prompts and zod validators. They reject:
+    - replies that aren't JSON;
+    - replies with missing or invalid fields;
+    - facts with no sources;
+    - citations of records that don't exist;
+    - an "established" root cause with no citations.
+  - An unconfirmed root cause is labeled "Not yet established. Leading hypothesis (unconfirmed)…".
+  - For local dev and tests only, a `simulate: 'malformed'` hook (gated by `ALLOW_DEBUG_ROUTES`) forces a bad model reply so the failure path can be tested.
+- **AI summary:**
+  - The `requestSummary` action needs responder or above. It ignores a second request while one is running (double-clicks) and has a 30-second cooldown after a summary is generated.
+  - War room `AiSummaryCard`: overview, current understanding, confirmed facts with sources, hypotheses with confidence and evidence, open questions, and next steps. It shows "generated X ago for Y · N new events since", plus Generate/Regenerate/Retry and a visible failure state.
+- **Slack:**
+  - `queueSlack` in `src/actions/notify.ts` is called from `createIncident` (declared, plus critical if the incident starts as Critical) and `updateIncident` (escalated to Critical, resolved).
+  - It queues nothing when Slack isn't configured, and it never fails the incident action.
+  - Each notification gets a dedupe key as its record id.
+  - The job (`src/jobs/slack-job.ts`) reads the token from `team_secrets` and posts a Block Kit message: title, severity, status, service, duration, and an "Open in IncidentHub" link to `https://<app>.app.space/…`.
+  - The Team page lists recent notifications with their delivery status. Commanders can retry failed ones (`retryNotification`).
+- **Postmortem:**
+  - Actions: `requestPostmortem` (responder or above, and only once the incident is resolved), `savePostmortem` (responder or above, version-checked), `finalizePostmortem` (commander only; finalizing twice does nothing).
+  - Page `t/[teamId]/incidents/[incidentId]/postmortem.tsx` covers generate, retry, regenerate (with a confirmation), and seven editable sections.
+  - It warns "someone else saved" instead of overwriting, adopts a teammate's save live when you have no local edits, and shows a read-only view once finalized.
+  - The war room header links to the postmortem once the incident is resolved.
+- **GitHub (Composio):**
+  - Settings has a "Connect GitHub" section (`composio/initiate-connection`, then GitHub consent, then back to Settings) and shows the connection status (`composio/list-connections`).
+  - The `createGithubIssue` action is commander-only. It needs the repository set on the Team page. It claims the action item first so a double-click can't open two issues, then runs `GITHUB_CREATE_AN_ISSUE` as the user who clicked. The issue body includes the incident key, the detail, severity, service, a postmortem link, and up to 5 related findings. It stores the issue's URL and number, appends a timeline event, and releases the claim if anything fails.
+- **Bug found by the tests and fixed:** the postmortem editor compared the form against the *live* record to decide whether you had unsaved changes. A teammate's save therefore made an untouched form look edited, and it never picked up their changes. It now compares against the version the form is based on.
+- **Polish after reviewing screenshots:**
+  - "N new events since" no longer counts the summary's own event.
+  - The postmortem prompt now requires timeline times in UTC HH:MM.
+- **Tests (following the testing standard):**
+  - **Unit:** `src/ai/summary.test.ts` and `src/ai/postmortem.test.ts` (10 tests) cover grounding and validation.
+  - **Functionality:**
+    - `tests/ai-summary.spec.ts`: a real OpenAI call; Bob generates the summary and both browsers see it.
+    - `tests/slack.spec.ts`: which events queue a notification, and that retries don't duplicate them.
+    - `tests/postmortem.spec.ts`: a real OpenAI call; generate, Bob edits and Alice sees it live, Alice finalizes, and the timeline records each step.
+  - **Errors:**
+    - `tests/ai-summary-errors.spec.ts`: observers are forbidden and outsiders get not_found; bad input is rejected; a second request while one is running is ignored; a malformed reply ends in a visible failure, and Retry succeeds; regenerating too soon gives a readable cooldown message.
+    - `tests/slack-errors.spec.ts`: an unconfigured team queues nothing; a rejected token shows "failed" (and is never displayed); a responder can't retry.
+    - `tests/postmortem-errors.spec.ts`:
+      - an unresolved incident and the wrong roles are refused;
+      - invalid sections are rejected;
+      - a malformed reply ends in a visible failure with Retry;
+      - a stale save gets a conflict;
+      - GitHub with no repository, or no connected account, fails clearly and releases the claim;
+      - edits and regeneration after finalizing are refused.
+- **Verified:** `tsc` and `eslint` are clean. `npm run test:all` passes 18 unit and 47 Playwright tests, twice in a row. Screenshots of the war room (with an AI summary) and the postmortem draft were reviewed.
+- **Can't be automated; check by hand on the live site:**
+  - real delivery to your Slack channel (tests don't have your token);
+  - real GitHub issue creation (test accounts can't connect GitHub).
+- **Not yet deployed.**
+
 ## 2026-11-24: Presence, "who's viewing this incident" (Phase 3)
 - **Design D21 (chosen by the user):** incident presence rooms are restricted to the incident's team.
 - **Server** (`src/server/realtime-routes.ts`):

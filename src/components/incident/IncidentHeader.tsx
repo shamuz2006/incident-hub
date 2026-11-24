@@ -4,7 +4,8 @@
  */
 
 import { useState } from 'react'
-import { CheckCircle2, RotateCcw } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { CheckCircle2, FileText, RotateCcw } from 'lucide-react'
 import type { RecordData } from 'deepspace'
 import { Button, ConfirmModal } from '@/components/ui'
 import { SeverityBadge, StatusPill } from '../badges'
@@ -20,11 +21,12 @@ import {
   type IncidentStatus,
   type Severity,
 } from '../../lib/domain'
+import { postmortemPath } from '../../lib/navigation'
 import { displayName, useTeam } from '../../lib/team-context'
 import { dateTime, duration, timeAgo } from '../../lib/time'
 
 export function IncidentHeader({ incident }: { incident: RecordData<Incident> }) {
-  const { can, memberById } = useTeam()
+  const { can, memberById, teamId } = useTeam()
   const run = useRunAction()
   const [confirmResolve, setConfirmResolve] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -97,6 +99,14 @@ export function IncidentHeader({ incident }: { incident: RecordData<Incident> })
           <Button size="sm" variant="ghost" disabled={busy} onClick={() => update({ status: 'investigating' }, 'Could not reopen')}>
             <RotateCcw aria-hidden /> Reopen
           </Button>
+        )}
+        {resolved && (
+          <Link
+            to={postmortemPath(teamId, incident.recordId)}
+            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <FileText className="h-3.5 w-3.5" aria-hidden /> Postmortem
+          </Link>
         )}
         <span className="text-sm text-muted-foreground">
           Incident Commander:{' '}

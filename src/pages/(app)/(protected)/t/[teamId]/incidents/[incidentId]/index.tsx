@@ -10,6 +10,7 @@ import { ArrowLeft } from 'lucide-react'
 import { usePresenceRoom, useQuery, type RecordData } from 'deepspace'
 import { RoleBadge } from '../../../../../../../components/badges'
 import { NativeSelect } from '../../../../../../../components/form'
+import { AiSummaryCard } from '../../../../../../../components/incident/AiSummaryCard'
 import { Discussion } from '../../../../../../../components/incident/Discussion'
 import { FindingsPanel } from '../../../../../../../components/incident/FindingsPanel'
 import { IncidentHeader } from '../../../../../../../components/incident/IncidentHeader'
@@ -74,6 +75,9 @@ export default function WarRoomPage() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
+          <Panel title="AI summary">
+            <AiSummaryCard incidentId={incidentId} eventCount={events.records.length} />
+          </Panel>
           <Panel title="Investigation findings" count={findings.records.length}>
             <FindingsPanel incidentId={incidentId} findings={findings.records} />
           </Panel>

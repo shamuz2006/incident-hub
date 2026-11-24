@@ -14,7 +14,6 @@ import {
   JobRoom,
   PresenceRoom,
   RecordRoom,
-  resolveAppRole,
   workerErrorHandler,
   YjsRoom,
 } from 'deepspace/worker'
@@ -68,12 +67,17 @@ export class AppCronRoom extends CronRoom<Env> {
 /** Runs durable background work defined in src/jobs.ts. */
 export class AppJobRoom extends JobRoom<Env> {
   constructor(state: DurableObjectState, env: Env) {
+    // IncidentHub: jobs are only ever enqueued by server actions, after the
+    // caller's team role has been checked (src/actions/ai.ts, incidents.ts).
+    // Browsers get no access to the queue: progress is mirrored onto the
+    // ai_reports / postmortems / notifications records instead, which are
+    // team-scoped. Server-side enqueueJob() uses an internal endpoint that
+    // isn't subject to these checks.
     super(state, env, {
-      authorizeWrite: async (user) => {
-        if (user.userId.startsWith('anon-')) return false
-        const role = await resolveAppRole(env, user.userId)
-        return role === 'member' || role === 'admin'
-      },
+      authorizeRead: () => false,
+      authorizeWrite: () => false,
+      defaultMaxAttempts: 3,
+      retryBackoffMs: 2000,
     })
   }
 

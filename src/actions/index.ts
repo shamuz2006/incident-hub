@@ -10,6 +10,9 @@ import type { ActionHandler } from 'deepspace/worker'
 import type { Env } from '../../worker'
 import * as teams from './teams'
 import * as incidents from './incidents'
+import * as ai from './ai'
+import * as notify from './notify'
+import * as postmortem from './postmortem'
 
 export const actions: Record<string, ActionHandler<Env>> = {
   // Teams & membership
@@ -29,4 +32,12 @@ export const actions: Record<string, ActionHandler<Env>> = {
   addComment: incidents.addComment,
   createTask: incidents.createTask,
   updateTask: incidents.updateTask,
+  // AI (queues background jobs)
+  requestSummary: ai.requestSummary,
+  retryNotification: notify.retryNotification,
+  // Postmortems & GitHub
+  requestPostmortem: postmortem.requestPostmortem,
+  savePostmortem: postmortem.savePostmortem,
+  finalizePostmortem: postmortem.finalizePostmortem,
+  createGithubIssue: postmortem.createGithubIssue,
 }

@@ -1,13 +1,14 @@
 /**
- * User settings: profile, team memberships, and account actions.
- * (GitHub connection for issue creation is added with the GitHub integration.)
+ * User settings: profile, team memberships, GitHub connection, and account actions.
  */
 
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { signOut, useUser } from 'deepspace'
+import { Github } from 'lucide-react'
+import { integration, signOut, useUser } from 'deepspace'
 import { Button } from '@/components/ui'
 import { RoleBadge } from '../../../components/badges'
-import { EmptyBlock, LoadingBlock } from '../../../components/states'
+import { EmptyBlock, InlineError, LoadingBlock, Spinner } from '../../../components/states'
 import { teamPath } from '../../../lib/navigation'
 import { useMyTeams } from '../../../lib/team-context'
 
@@ -68,6 +69,8 @@ export default function SettingsPage() {
         )}
       </section>
 
+      <GithubConnection />
+
       <section className="rounded-lg border border-border bg-card p-5">
         <h2 className="mb-2 font-semibold">Account</h2>
         <Button variant="secondary" onClick={() => signOut()}>
@@ -75,5 +78,71 @@ export default function SettingsPage() {
         </Button>
       </section>
     </div>
+  )
+}
+
+/**
+ * GitHub connection (Composio, Design D8). Each commander connects their own
+ * account once; issues are then opened as them. DeepSpace holds the OAuth
+ * tokens — IncidentHub never sees them.
+ */
+function GithubConnection() {
+  const [state, setState] = useState<'loading' | 'connected' | 'disconnected' | 'error'>('loading')
+  const [error, setError] = useState<string | null>(null)
+  const [connecting, setConnecting] = useState(false)
+
+  const check = useCallback(async () => {
+    const res = await integration.post<{ connections: Array<{ toolkit: string; active: boolean }> }>('composio/list-connections', {})
+    if (!res.success) {
+      setState('error')
+      setError(res.error ?? 'Could not check your GitHub connection.')
+      return
+    }
+    const github = res.data?.connections.some((c) => c.toolkit?.toLowerCase() === 'github' && c.active)
+    setState(github ? 'connected' : 'disconnected')
+  }, [])
+
+  useEffect(() => {
+    void check()
+  }, [check])
+
+  async function connect() {
+    setConnecting(true)
+    setError(null)
+    const res = await integration.post<{ redirectUrl?: string }>('composio/initiate-connection', {
+      toolkit: 'github',
+      callbackUrl: window.location.href,
+    })
+    setConnecting(false)
+    if (!res.success || !res.data?.redirectUrl) {
+      setError(res.error ?? 'Could not start the GitHub connection.')
+      return
+    }
+    window.location.assign(res.data.redirectUrl) // GitHub consent, then back here
+  }
+
+  return (
+    <section className="rounded-lg border border-border bg-card p-5" data-testid="github-connection" data-state={state}>
+      <h2 className="mb-1 flex items-center gap-2 font-semibold">
+        <Github className="h-4 w-4" aria-hidden /> GitHub
+      </h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Connect your GitHub account to file postmortem action items as issues. Issues are opened as you.
+      </p>
+      {state === 'loading' ? (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner /> Checking connection…
+        </p>
+      ) : state === 'connected' ? (
+        <p className="text-sm text-emerald-400">● Connected</p>
+      ) : (
+        <Button onClick={connect} loading={connecting}>
+          <Github aria-hidden /> Connect GitHub
+        </Button>
+      )}
+      <div className="mt-2">
+        <InlineError message={error} />
+      </div>
+    </section>
   )
 }

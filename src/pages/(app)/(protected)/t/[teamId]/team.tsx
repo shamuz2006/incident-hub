@@ -10,8 +10,10 @@ import { RoleBadge } from '../../../../../components/badges'
 import { CopyButton, Field, NativeSelect } from '../../../../../components/form'
 import { EmptyBlock, InlineError, LoadingBlock } from '../../../../../components/states'
 import { UserAvatar } from '../../../../../components/UserAvatar'
-import { callAction, useAction } from '../../../../../lib/actions'
-import { ROLE_DESCRIPTIONS, ROLE_LABELS, TEAM_ROLES, type TeamRole } from '../../../../../lib/domain'
+import { useQuery } from 'deepspace'
+import { callAction, useAction, useRunAction } from '../../../../../lib/actions'
+import { ROLE_DESCRIPTIONS, ROLE_LABELS, TEAM_ROLES, incidentKey, type Incident, type NotificationRecord, type TeamRole } from '../../../../../lib/domain'
+import { timeAgo } from '../../../../../lib/time'
 import { displayName, useTeam } from '../../../../../lib/team-context'
 
 export default function TeamPage() {
@@ -25,6 +27,7 @@ export default function TeamPage() {
       <MembersSection />
       {can('commander') && <InvitesSection />}
       <IntegrationsSection />
+      <SlackActivity />
       <RolesHelp />
     </div>
   )
@@ -360,6 +363,54 @@ function RolesHelp() {
           </div>
         ))}
       </dl>
+    </Section>
+  )
+}
+
+// ── Slack delivery log ───────────────────────────────────────────────────────
+
+/** Recent Slack notifications and whether they were delivered (Design D25). */
+function SlackActivity() {
+  const { teamId, team, can } = useTeam()
+  const run = useRunAction()
+  const notifications = useQuery<NotificationRecord>('notifications', { where: { teamId }, orderBy: 'createdAt', orderDir: 'desc', limit: 8 })
+  const incidents = useQuery<Incident>('incidents', { where: { teamId } })
+  const keyById = new Map(incidents.records.map((i) => [i.recordId, incidentKey(i.data.number)]))
+  if (!team.data.slackConfigured && notifications.records.length === 0) return null
+
+  const label = { declared: 'Incident declared', critical: 'Critical alert', resolved: 'Incident resolved' } as Record<string, string>
+  const statusStyle: Record<string, string> = {
+    sent: 'text-emerald-400',
+    queued: 'text-muted-foreground',
+    failed: 'text-destructive',
+    skipped: 'text-muted-foreground',
+  }
+  return (
+    <Section title="Slack notifications" description="Recent messages sent to your Slack channel.">
+      {notifications.records.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nothing sent yet. Declaring an incident will post here.</p>
+      ) : (
+        <ul className="divide-y divide-border" data-testid="slack-log">
+          {notifications.records.map((n) => (
+            <li key={n.recordId} className="flex flex-wrap items-center gap-3 py-2 text-sm" data-status={n.data.status}>
+              <span className="font-mono text-xs text-muted-foreground">{keyById.get(n.data.incidentId ?? '') ?? '—'}</span>
+              <span className="flex-1">{label[n.data.kind] ?? n.data.kind}</span>
+              <span className={statusStyle[n.data.status]}>{n.data.status === 'queued' ? 'sending…' : n.data.status}</span>
+              <span className="text-xs text-muted-foreground">{timeAgo(n.createdAt)}</span>
+              {n.data.status === 'failed' && (
+                <>
+                  <span className="w-full text-xs text-destructive">{n.data.error}</span>
+                  {can('commander') && (
+                    <Button size="sm" variant="outline" onClick={() => run('retryNotification', { notificationId: n.recordId }, 'Could not retry')}>
+                      Retry
+                    </Button>
+                  )}
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </Section>
   )
 }

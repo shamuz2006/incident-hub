@@ -51,6 +51,7 @@ import {
   trimmed,
   type Rec,
 } from './lib'
+import { queueSlack } from './notify'
 
 /** 1 (Critical, most severe) to 4 (Low). The UI shows names; the API uses numbers. */
 const severitySchema = z
@@ -76,7 +77,7 @@ export const createIncident = defineAction(
     severity: severitySchema,
     service: optionalText(80),
   }),
-  async ({ userId, params, tools }) => {
+  async ({ userId, params, tools, env }) => {
     await requireTeamRole(tools, userId, params.teamId, 'commander')
 
     // Double-submit: the opId is the record id, so a retry returns the original.
@@ -123,6 +124,12 @@ export const createIncident = defineAction(
       description: `${await memberName(tools, params.teamId, userId)} declared ${incidentKey(number)} (${SEVERITY_NAMES[params.severity]}): ${params.title}`,
       metadata: { severity: params.severity },
     })
+    // Slack (Design D25): announce every new incident; Critical ones get a
+    // separate alert. Dedupe keys make retries safe.
+    await queueSlack(tools, env, { teamId: params.teamId, incidentId, kind: 'declared', dedupeKey: `${incidentId}_declared` })
+    if (params.severity === 1) {
+      await queueSlack(tools, env, { teamId: params.teamId, incidentId, kind: 'critical', dedupeKey: `${incidentId}_critical` })
+    }
     return ok({ incidentId, number })
   },
 )
@@ -139,7 +146,7 @@ export const updateIncident = defineAction(
     status: z.enum(INCIDENT_STATUSES).optional(),
     commanderId: idSchema.optional(),
   }),
-  async ({ userId, params, tools }) => {
+  async ({ userId, params, tools, env }) => {
     const { incident } = await authorizeIncident(tools, userId, params.incidentId, 'commander')
     const current = incident.data
     if (current.lastOpId === params.opId) return ok({ version: current.version, alreadyApplied: true })
@@ -208,6 +215,14 @@ export const updateIncident = defineAction(
         actorId: userId,
         ...e,
       })
+    }
+    // Slack (Design D25): escalation to Critical (once per incident) and resolution.
+    const target = { teamId: current.teamId, incidentId: incident.recordId }
+    if (patch.severity === 1) {
+      await queueSlack(tools, env, { ...target, kind: 'critical', dedupeKey: `${incident.recordId}_critical` })
+    }
+    if (patch.status === 'resolved') {
+      await queueSlack(tools, env, { ...target, kind: 'resolved', dedupeKey: `${params.opId}_resolved` })
     }
     return ok({ version })
   },

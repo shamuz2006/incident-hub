@@ -265,3 +265,46 @@ The SDK applies the `'team'` read rule (D2) with a SQL `teamId IN (?, ?, …)` t
 | Team-wide "online" via `usePresence()` | No new route. | Doesn't show who is viewing *this* incident, can be up to 5 minutes stale, and the users roster is visible across teams. |
 
 **Implementation.** `src/server/realtime-routes.ts` refuses a presence connection for an `incident:*` room unless the caller's token is valid and they're an active member of the incident's team. The check is `canJoinIncidentPresence`.
+
+---
+
+## D22. Responders and commanders can generate AI summaries
+**Date:** 2026-11-24 · **Status:** Accepted (chosen by the user)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Responders and commanders** (chosen) | The people investigating can refresh the summary themselves, which matches the PRD. | More OpenAI calls, billed to the app owner. This is mitigated by a 30-second cooldown per incident, and every summary shows who requested it. |
+| Commanders only | Tight cost control. | Responders have to ask the commander in the middle of an incident. |
+| Everyone, including observers | Simplest. | Read-only users could spend money, which contradicts observer = read-only. |
+
+---
+
+## D23. Postmortems are edited as a section form, one editor at a time
+**Date:** 2026-11-24 · **Status:** Accepted (chosen by the user)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **One textarea per section. Saving is version-checked, as with incidents (D6).** (chosen) | Simple, consistent with the rest of the app, and easy to explain. A concurrent save gets a clear "someone else saved" message instead of overwriting. | Two people can't type in the same section at the same time. |
+| Live co-editing (Yjs) | Google-Docs-style collaboration. | More code and edge cases (finalizing during in-flight edits, gating the Yjs room like presence), and real risk on deadline day. |
+
+---
+
+## D24. Only the latest AI summary is kept, with its age shown
+**Date:** 2026-11-24 · **Status:** Accepted (chosen by the user)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **One summary per incident, overwritten on regenerate. The UI shows its age, who requested it, and how many events have happened since.** (chosen) | Simple and always current. The timeline still records each generation. | Earlier summaries are gone. |
+| Keep a history | You can see how the team's understanding evolved. | Extra UI and storage for little value during a live incident. |
+
+---
+
+## D25. Slack alerts for declared, escalated to Critical, and resolved
+**Date:** 2026-11-24 · **Status:** Accepted (chosen by the user)
+
+- **Events that alert:** an incident is declared (any severity); an incident is declared as or escalated to Critical (once per incident); an incident is resolved.
+- **Events that don't:** important findings and responder changes. They stay in the app, so Slack supplements IncidentHub rather than replacing it.
+- **Deduplication:** each notification has a deterministic record id, so a retried action never posts twice:
+  - `slack_<incidentId>_declared`
+  - `slack_<incidentId>_critical`
+  - `slack_<opId>_resolved`. A reopen followed by a second resolve is a new operation, so it alerts again.
