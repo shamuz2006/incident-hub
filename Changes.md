@@ -19,6 +19,7 @@ Major changes, newest first. Each entry says what changed, where, and how it was
   - `tests/demo-errors.spec.ts`: a double-click returns the same team; bad input is rejected; the demo team is invisible to an outsider; no Slack notifications are queued.
   - `npm run test:prod` now includes `demo.spec.ts`.
 - **Verified:** `eslint` is clean. `npm run test:all` passed 18 unit and 49 Playwright tests in 2 of 3 full runs. In the other run, one scaffold test flaked: `collab.spec.ts` "API status page renders loading…" asserts a loading state that lasts about 100ms. It passed 3 out of 3 times on its own. It's the scaffold's own test and was left unchanged.
+- **Deployed:** commit `3cf9ec8` is live at https://incident-hub.app.space. `npm run test:prod` passes all 13 browser tests against the live site, including the demo team, the real-AI summary, and the postmortem.
 
 ---
 
