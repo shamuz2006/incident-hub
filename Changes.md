@@ -23,7 +23,7 @@ Major changes, newest first. Each entry says what changed, where, and how it was
   - `npm run test:prod` now also includes the presence specs. They'll pass against the live site after the next deploy.
 - **Noted for Phase 4:** the scaffold's `/ws/jobs` route lets any signed-in member enqueue jobs from the browser. When the AI jobs are added, enqueueing will be server-only, behind an authorization check.
 - **Verified:** `tsc` and `eslint` are clean. `npm run test:all` passes 8 unit and 37 Playwright tests, twice in a row.
-- **Not yet deployed.**
+- **Deployed:** commit `39bfa9e` is live at https://incident-hub.app.space. `npm run test:prod` passes all 10 browser tests against the live site, including the presence and presence-security specs.
 
 ## 2026-11-24: Severity shown as Critical / High / Medium / Low (Design D20)
 - **What changed:** the UI now shows severity names instead of "SEV-1…4". The backend, database, and API still use 1–4 (1 = Critical, 4 = Low). No data migration was needed.
