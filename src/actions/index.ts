@@ -13,6 +13,7 @@ import * as incidents from './incidents'
 import * as ai from './ai'
 import * as notify from './notify'
 import * as postmortem from './postmortem'
+import * as demo from './demo'
 
 export const actions: Record<string, ActionHandler<Env>> = {
   // Teams & membership
@@ -40,4 +41,6 @@ export const actions: Record<string, ActionHandler<Env>> = {
   savePostmortem: postmortem.savePostmortem,
   finalizePostmortem: postmortem.finalizePostmortem,
   createGithubIssue: postmortem.createGithubIssue,
+  // Sample data in a new team of your own
+  createDemoTeam: demo.createDemoTeam,
 }

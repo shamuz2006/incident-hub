@@ -8,6 +8,7 @@ import { Github } from 'lucide-react'
 import { integration, signOut, useUser } from 'deepspace'
 import { Button } from '@/components/ui'
 import { RoleBadge } from '../../../components/badges'
+import { DemoTeamButton } from '../../../components/DemoTeamButton'
 import { EmptyBlock, InlineError, LoadingBlock, Spinner } from '../../../components/states'
 import { teamPath } from '../../../lib/navigation'
 import { useMyTeams } from '../../../lib/team-context'
@@ -41,9 +42,12 @@ export default function SettingsPage() {
       <section className="rounded-lg border border-border bg-card p-5">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-semibold">Your teams</h2>
-          <Link to="/onboarding" className="text-sm text-primary hover:underline">
-            Create or join a team
-          </Link>
+          <div className="flex items-center gap-3">
+            <DemoTeamButton variant="ghost" />
+            <Link to="/onboarding" className="text-sm text-primary hover:underline">
+              Create or join a team
+            </Link>
+          </div>
         </div>
         {status === 'loading' ? (
           <LoadingBlock className="py-4" />

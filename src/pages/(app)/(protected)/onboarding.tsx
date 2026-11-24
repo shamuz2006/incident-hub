@@ -6,6 +6,7 @@ import { useState, type SubmitEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { Siren, Users } from 'lucide-react'
 import { Button, Input } from '@/components/ui'
+import { DemoTeamButton } from '../../../components/DemoTeamButton'
 import { Field } from '../../../components/form'
 import { InlineError } from '../../../components/states'
 import { useAction } from '../../../lib/actions'
@@ -81,6 +82,13 @@ export default function OnboardingPage() {
             Join team
           </Button>
         </form>
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-border p-4">
+        <p className="flex-1 text-sm text-muted-foreground">
+          Just exploring? Create a separate demo team with three sample incidents. It can&apos;t affect any real team.
+        </p>
+        <DemoTeamButton />
       </div>
     </div>
   )

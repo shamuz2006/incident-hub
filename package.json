@@ -22,7 +22,7 @@
     "test:api": "deepspace test run api",
     "test:e2e": "deepspace test run e2e",
     "test:reset": "rm -rf .wrangler/state && echo 'Local dev database cleared (test data only).'",
-    "test:prod": "playwright test -c tests/playwright.prod.config.ts war-room.spec.ts war-room-errors.spec.ts team-ui.spec.ts presence.spec.ts presence-errors.spec.ts ai-summary.spec.ts postmortem.spec.ts",
+    "test:prod": "playwright test -c tests/playwright.prod.config.ts war-room.spec.ts war-room-errors.spec.ts team-ui.spec.ts presence.spec.ts presence-errors.spec.ts ai-summary.spec.ts postmortem.spec.ts demo.spec.ts",
     "test:unit": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "validate": "tsc --noEmit && vitest run --passWithNoTests",

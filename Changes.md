@@ -4,6 +4,24 @@ Major changes, newest first. Each entry says what changed, where, and how it was
 
 ---
 
+## 2026-11-24: Demo data, README, final deploy (Phase 5)
+- **Demo data (Design D26):**
+  - The new action `createDemoTeam` in `src/actions/demo.ts` creates a separate team, "Demo: Acme Payments", owned by the caller. It's marked `isDemo` and has three realistic incidents with findings, tasks, discussion, and timeline events:
+    - a Critical one, Investigating;
+    - a High one, Monitoring;
+    - a Medium one, Resolved, so a postmortem can be generated right away.
+  - It's idempotent per click (opId). It has no Slack configured, so it sends nothing.
+  - It's reached from the `DemoTeamButton` on Onboarding and Settings.
+- **Refactor:** `createTeamFor` in `src/actions/teams.ts` is now shared by `createTeam` and the demo action. It writes the membership row before the team row, so the creator can read the team as soon as it's broadcast.
+- **README.md:** how to try the app, the features, the DeepSpace building blocks used, how authorization, real-time, consistency, jobs, and secrets work, a code map, run and test commands, and known limitations.
+- **Tests:**
+  - `tests/demo.spec.ts` (functionality): the button builds a populated team with the right counts and a working war room.
+  - `tests/demo-errors.spec.ts`: a double-click returns the same team; bad input is rejected; the demo team is invisible to an outsider; no Slack notifications are queued.
+  - `npm run test:prod` now includes `demo.spec.ts`.
+- **Verified:** `eslint` is clean. `npm run test:all` passed 18 unit and 49 Playwright tests in 2 of 3 full runs. In the other run, one scaffold test flaked: `collab.spec.ts` "API status page renders loading…" asserts a loading state that lasts about 100ms. It passed 3 out of 3 times on its own. It's the scaffold's own test and was left unchanged.
+
+---
+
 ## 2026-11-24: Integrations: AI summary, Slack, AI postmortem, GitHub issues (Phase 4)
 - **Design decisions D22–D25 (chosen by the user):**
   - D22: responders and commanders can generate AI summaries.

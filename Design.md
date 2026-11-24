@@ -308,3 +308,14 @@ The SDK applies the `'team'` read rule (D2) with a SQL `teamId IN (?, ?, …)` t
   - `slack_<incidentId>_declared`
   - `slack_<incidentId>_critical`
   - `slack_<opId>_resolved`. A reopen followed by a second resolve is a new operation, so it alerts again.
+
+---
+
+## D26. Demo data is a one-click team of your own
+**Date:** 2026-11-24 · **Status:** Accepted
+
+| Option | Pros | Cons |
+|---|---|---|
+| **A "Create a demo team" action: a new team owned by the caller, with three sample incidents marked `isDemo`** (chosen) | Evaluators get a populated app in one click. It can't touch real data, because it's a separate team. It sends no Slack messages, because no Slack is configured. It's idempotent per click (opId). | Anyone signed in can create demo teams. Each is tiny and private to them. |
+| An owner-only seed script | Fully controlled. | Useless to evaluators, who aren't the owner. |
+| Seeding fixed data into a shared team | One dataset. | Breaks isolation, and visitors would edit each other's demo. |

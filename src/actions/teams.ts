@@ -48,29 +48,32 @@ async function activeCommanders(tools: ActionTools, teamId: string) {
   return queryRecords<TeamMember>(tools, 'team_members', { teamId, status: 'active', role: 'commander' })
 }
 
+/**
+ * Creates a team with `userId` as its first Incident Commander. Shared by
+ * createTeam and the demo-data action (src/actions/demo.ts).
+ */
+export async function createTeamFor(tools: ActionTools, userId: string, name: string, extra: Partial<Team> = {}) {
+  const teamId = `team_${randomToken(8)}`
+  // Membership first, then the team row: the creator can read the team the
+  // moment it's broadcast.
+  must(
+    await tools.create(
+      'team_members',
+      { teamId, userId, status: 'active', role: 'commander', ...(await callerProfile(tools, userId)) },
+      memberRecordId(teamId, userId),
+    ),
+    'add you to the team',
+  )
+  must(
+    await tools.create<Team & Record<string, unknown>>('teams', { teamId, name, incidentCounter: 0, ...extra }, teamId),
+    'create team',
+  )
+  return teamId
+}
+
 export const createTeam = defineAction(
   z.object({ name: trimmed(2, 80) }),
-  async ({ userId, params, tools }) => {
-    const teamId = `team_${randomToken(8)}`
-    must(
-      await tools.create<Team & Record<string, unknown>>(
-        'teams',
-        { teamId, name: params.name, incidentCounter: 0 },
-        teamId,
-      ),
-      'create team',
-    )
-    // The creator is the team's first Incident Commander.
-    must(
-      await tools.create(
-        'team_members',
-        { teamId, userId, status: 'active', role: 'commander', ...(await callerProfile(tools, userId)) },
-        memberRecordId(teamId, userId),
-      ),
-      'add you to the team',
-    )
-    return ok({ teamId })
-  },
+  async ({ userId, params, tools }) => ok({ teamId: await createTeamFor(tools, userId, params.name) }),
 )
 
 export const createInvite = defineAction(
