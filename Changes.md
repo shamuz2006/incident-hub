@@ -28,7 +28,7 @@ Major changes, newest first. Each entry says what changed, where, and how it was
   - The local dev database (test data only) was moved to a backup in the session scratchpad rather than deleted.
   - Added `npm run test:reset` to clear it next time.
 - **Verified:** `tsc` and `eslint` are clean. `npx deepspace test run all` passes 8 unit and 34 Playwright tests, twice in a row.
-- **Not yet deployed:** the live site still shows "SEV-n" until the next deploy. `npm run test:prod` will fail its new name assertions until then.
+- **Deployed:** commit `a76707d` is live at https://incident-hub.app.space. `npm run test:prod` passes all 7 browser tests against the live site, including the new severity-name assertions.
 
 ## 2026-11-24: First deploy, live at https://incident-hub.app.space
 - `npx deepspace status` confirmed `sourceInference: github` and a clean tree. The deploy then claimed GitHub `shamuz2006/incident-hub` as the source (Design D1) and confirmed both the edge and the data plane.
