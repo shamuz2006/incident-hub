@@ -41,6 +41,9 @@ export const incidentsSchema: CollectionSchema = {
     // Optimistic-concurrency token: every update must send the version it
     // read, and the server rejects the write if someone changed it since.
     num('version', { required: true }),
+    // The last operation applied. A retried request with the same opId is
+    // recognised and not applied twice.
+    text('lastOpId'),
     text('resolvedAt', { interpretation: { kind: 'datetime' } }),
     bool('isDemo'),
   ],
@@ -88,6 +91,7 @@ export const tasksSchema: CollectionSchema = {
     text('priority', { required: true }), // 'high' | 'medium' | 'low'
     text('status', { required: true }), // 'todo' | 'in_progress' | 'done'
     num('version', { required: true }),
+    text('lastOpId'),
   ],
   permissions: TEAM_READ_ONLY,
 }

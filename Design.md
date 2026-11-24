@@ -171,3 +171,49 @@ The member's `status` is set to `removed` rather than deleting the row. Access e
 **Routes.** `/t/:teamId/dashboard`, `/t/:teamId/incidents/:incidentId`, `/t/:teamId/incidents/:incidentId/postmortem`, and `/t/:teamId/team` are team-scoped. `/settings`, `/onboarding`, and `/join/:code` are user-level. `/home` sends you to your first team, or to onboarding if you have none.
 
 The URL only picks which team to *show*. It grants nothing: the server still checks membership on every read and write.
+
+---
+
+## D16. War room layout: two columns
+**Date:** 2026-11-24 · **Status:** Accepted (chosen by the user)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Two columns: the work on the left (findings, tasks, discussion), the live timeline and responders on the right** (chosen) | The timeline is always visible while you work, which is the standard ops-tool layout. A simple CSS grid. | On mobile, the timeline drops below the panels. |
+| One column with tabs | Simplest, and good on mobile. | You can't see new events while you're on another tab, which hides the collaboration. |
+| Three columns | Everything visible at once on a large screen. | Cramped below about 1400px, and more layout code. |
+
+---
+
+## D17. Severity and status changes apply immediately; only Resolve asks for confirmation
+**Date:** 2026-11-24 · **Status:** Accepted (chosen by the user)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Apply immediately, confirm only Resolve** (chosen) | Fast during an outage. A misclick shows up on the timeline and is easy to undo. The single guard sits on the most consequential action. | A misclicked severity is briefly broadcast to everyone before it's corrected. |
+| Apply everything immediately | Fewest clicks. | An accidental Resolve ends the incident and (later) sends a Slack "resolved" message. |
+| Confirm every change | No accidental changes. | Slows the commander down. More dialogs. |
+
+---
+
+## D18. Responders can contribute to any incident in their team
+**Date:** 2026-11-24 · **Status:** Accepted (chosen by the user)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Any responder can add findings, comments, and tasks on any team incident** (chosen) | Matches real incidents, where anyone who spots something can help. The simplest rules. | The assigned-responders list is informational, not a gate. |
+| Only incidents the responder is assigned to | Strict control, and closer to the PRD's "join assigned incidents". | Adds a step during an outage, more authorization code, and blocks a helpful teammate until a commander acts. |
+
+**Detail.** A responder's first contribution to an incident adds them to `responderIds` and records a "responder joined" timeline event. Commanders can also add responders explicitly.
+
+---
+
+## D19. A task's status can be changed by its assignee or a commander
+**Date:** 2026-11-24 · **Status:** Accepted (chosen by the user)
+
+| Option | Pros | Cons |
+|---|---|---|
+| **Assignee or commander** (chosen) | Matches the PRD's "update assigned investigation tasks". Responders can't change each other's work. | Only a commander can move an unassigned task. |
+| Any responder | Simplest. Anyone can pick up slack. | Responders can mark each other's tasks done by mistake. |
+
+Creating and assigning tasks is commander-only.

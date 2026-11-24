@@ -33,5 +33,6 @@ export const seo = {
   origin: typeof __DEEPSPACE_SITE_ORIGIN__ === 'string' ? __DEEPSPACE_SITE_ORIGIN__ : 'http://localhost',
   /** 1200×630 preview image, root-relative to public/ (e.g. '/og.png'). */
   // ogImage: '/og.png',
-  noindex: false,
+  // Demo app for a job application: keep it out of search results.
+  noindex: true,
 }

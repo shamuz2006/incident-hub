@@ -4,6 +4,66 @@ Major changes, newest first. Each entry says what changed, where, and how it was
 
 ---
 
+## 2026-11-24: Keep the app out of search results
+- `src/seo.ts`: `noindex: true`. The production build's landing page now carries `<meta name="robots" content="noindex, nofollow">`, and no sitemap is published.
+- This doesn't change access. Anyone with the URL can still open the app, and sign-in and team isolation work the same.
+- **Verified:** smoke tests pass, and `vite build` output includes the robots meta tag.
+
+## 2026-11-24: Incidents, dashboard, and war room (Phase 2)
+- **Design decisions D16–D19, chosen by the user:**
+  - D16: a two-column war room;
+  - D17: severity and status changes apply immediately, and only Resolve asks to confirm;
+  - D18: responders can contribute to any incident in their team;
+  - D19: a task's status can be changed by its assignee or a commander.
+- **Incident actions** in `src/actions/incidents.ts`:
+  - `createIncident` (commander). Gives the incident a per-team number (INC-n), retrying on a number collision.
+  - `updateIncident` (commander). Changes severity, status, resolve and reopen, the commander, and details. Version-checked, and records one timeline event per change.
+  - `addResponder` (commander).
+  - `addFinding` and `addComment` (responder and up). A responder's first contribution adds them to the response automatically.
+  - `createTask` (commander, assigning only to responders or commanders).
+  - `updateTask` (the assignee or a commander; only a commander can reassign or reprioritize).
+- **Safe retries:**
+  - A create uses the client's `opId` as the record id, so a repeated request returns the original record.
+  - An update records `lastOpId` on the record (a new column on incidents and tasks) and recognizes a repeat.
+  - Changing something to the value it already has (resolving a resolved incident, completing a completed task) does nothing and adds no timeline event.
+- **Dashboard** (`t/[teamId]/dashboard.tsx`):
+  - active-incident counts by severity;
+  - an "Assigned to you" list;
+  - the incident list, with filters for status, severity, and service;
+  - recently resolved incidents, showing how long each lasted;
+  - a live recent-activity feed;
+  - a "Declare incident" dialog for commanders.
+- **War room** (`t/[teamId]/incidents/[incidentId]/index.tsx` and `src/components/incident/*`):
+  - The header has severity and status dropdowns, Resolve with a confirmation dialog, and Reopen.
+  - The left column has findings (category and an "important" flag), tasks (create, assign, and move between statuses), and the discussion (⌘/Ctrl+Enter sends).
+  - The right column has the responder list (commanders can add people) and the live timeline, newest first.
+  - Every form keeps one `opId` until it succeeds, so a double-click can't create a duplicate.
+- **Helpers:**
+  - `useRunAction` runs a one-click action and shows a toast if it fails (`src/lib/actions.ts`).
+  - Time formatting is in `src/lib/time.ts`.
+  - `setupTeam` in the test helpers creates a team with members.
+- **Tests (13 new, following the testing standard):**
+  - **Functionality:**
+    - `tests/incidents.spec.ts`: the full incident lifecycle, numbering, and an escalation that changes several fields at once.
+    - `tests/war-room.spec.ts`: PRD demo steps 1–9 and 12 across two browsers, with live findings, tasks, timeline, discussion, status, and resolve. Also the dashboard filters.
+  - **Errors:**
+    - `tests/incident-errors.spec.ts`:
+      - invalid input (titles, severities of 0, 5, 1.5, or "1", statuses, a missing opId);
+      - role enforcement (an observer can't write; a responder can't change severity, status, or resolve, create tasks, or move other people's tasks);
+      - bad assignees;
+      - outsiders get `not_found`;
+      - stale edits get `conflict`, and the winning edit is kept;
+      - retries and repeats never duplicate anything.
+    - `tests/war-room-errors.spec.ts`:
+      - empty forms show inline errors and send no request;
+      - observers get a read-only view, and responders see no commander controls;
+      - cancelling Resolve changes nothing;
+      - a conflicting edit shows a toast, and the screen keeps the winning value.
+- **Verified:**
+  - `tsc` and `eslint` are clean.
+  - `npx deepspace test run all` passes 6 unit and 34 Playwright tests, twice in a row.
+  - Screenshots of the dashboard, the war room, and the war room on mobile were reviewed.
+
 ## 2026-11-22: Error-handling tests for teams (Phase 1b)
 New testing standard: every feature is tested for its basic functionality *and* for invalid input and human error. This adds to the existing tests.
 - **New spec `tests/team-errors.spec.ts` (8 tests):**

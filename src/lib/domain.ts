@@ -136,6 +136,7 @@ export interface Incident {
   commanderId?: string
   responderIds?: string[]
   version: number
+  lastOpId?: string
   resolvedAt?: string
   isDemo?: boolean
 }
@@ -167,6 +168,7 @@ export interface Task {
   priority: TaskPriority
   status: TaskStatus
   version: number
+  lastOpId?: string
 }
 
 export interface Comment {

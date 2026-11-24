@@ -8,6 +8,7 @@
 
 import { useCallback, useState } from 'react'
 import { getAuthToken } from 'deepspace'
+import { useToast } from '@/components/ui'
 
 export class ActionFailure extends Error {
   constructor(
@@ -47,6 +48,29 @@ export async function callAction<T = unknown>(name: string, params: Record<strin
 /** A fresh id for one user operation; reuse it when retrying that operation. */
 export function newOpId(): string {
   return crypto.randomUUID().replace(/-/g, '')
+}
+
+/**
+ * For one-click controls (dropdowns, buttons): runs an action and shows a
+ * toast if it fails. Resolves to true on success.
+ *
+ *   const run = useRunAction()
+ *   await run('updateIncident', { ... }, 'Could not change severity')
+ */
+export function useRunAction() {
+  const toast = useToast()
+  return useCallback(
+    async (name: string, params: Record<string, unknown>, failTitle: string): Promise<boolean> => {
+      try {
+        await callAction(name, params)
+        return true
+      } catch (err) {
+        toast.error(failTitle, (err as Error).message)
+        return false
+      }
+    },
+    [toast],
+  )
 }
 
 /**

@@ -9,6 +9,7 @@
 import type { ActionHandler } from 'deepspace/worker'
 import type { Env } from '../../worker'
 import * as teams from './teams'
+import * as incidents from './incidents'
 
 export const actions: Record<string, ActionHandler<Env>> = {
   // Teams & membership
@@ -20,4 +21,12 @@ export const actions: Record<string, ActionHandler<Env>> = {
   setMemberRole: teams.setMemberRole,
   removeMember: teams.removeMember,
   updateTeamSettings: teams.updateTeamSettings,
+  // Incidents
+  createIncident: incidents.createIncident,
+  updateIncident: incidents.updateIncident,
+  addResponder: incidents.addResponder,
+  addFinding: incidents.addFinding,
+  addComment: incidents.addComment,
+  createTask: incidents.createTask,
+  updateTask: incidents.updateTask,
 }
