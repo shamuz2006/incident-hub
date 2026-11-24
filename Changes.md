@@ -66,7 +66,7 @@ Major changes, newest first. Each entry says what changed, where, and how it was
 - **Can't be automated; check by hand on the live site:**
   - real delivery to your Slack channel (tests don't have your token);
   - real GitHub issue creation (test accounts can't connect GitHub).
-- **Not yet deployed.**
+- **Deployed:** commit `2c8ee73` is live at https://incident-hub.app.space. `npm run test:prod` passes all 12 browser tests against the live site, including the real-AI summary and postmortem specs. Slack delivery and GitHub issue creation still need a manual check on the live site.
 
 ## 2026-11-24: Presence, "who's viewing this incident" (Phase 3)
 - **Design D21 (chosen by the user):** incident presence rooms are restricted to the incident's team.
