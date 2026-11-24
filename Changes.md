@@ -4,6 +4,27 @@ Major changes, newest first. Each entry says what changed, where, and how it was
 
 ---
 
+## 2026-11-24: Presence, "who's viewing this incident" (Phase 3)
+- **Design D21 (chosen by the user):** incident presence rooms are restricted to the incident's team.
+- **Server** (`src/server/realtime-routes.ts`):
+  - Before a WebSocket connects to `/ws/presence/incident:<id>`, a check verifies the caller's token. It then loads the incident and requires an active `team_members` row for its team, using the new `canJoinIncidentPresence` and `recordTool` helpers.
+  - Responses: 401 without a token; 403 for non-members, unknown incidents, and malformed ids. The check fails closed on any error.
+  - Other presence scopes keep the scaffold's behavior.
+- **UI:**
+  - The new `src/components/incident/PresenceBar.tsx` shows "Viewing now: <avatars, names>", or "Only you are viewing", with a connection dot. It lists one entry per person even if they have several tabs open.
+  - The war room page calls `usePresenceRoom('incident:<id>')`, shows the bar under the header, and puts a green ring on responders who are currently viewing.
+- **Real-time panels:** these were already live from Phase 2 through per-panel `useQuery` subscriptions, and the two-browser specs re-verify them.
+- **Tests (following the testing standard):**
+  - `tests/presence.spec.ts`: Alice alone sees "Only you". When Bob opens the incident, both see each other live. When Bob leaves, Alice's indicator clears.
+  - `tests/presence-errors.spec.ts`: an outsider gets 403, a missing token gets 401, and an unknown or malformed incident id gets 403, while a member passes. An outsider who opens a raw WebSocket is refused and never appears in a member's viewer list.
+- **Test infrastructure:**
+  - The roughly-100-teams-per-user SDK limit (see `Design.md`) came back after about 5 full runs, because each run gives Alice about 18 new teams. The symptom: every live subscription stayed "loading".
+  - Added `npm run test:all`, which resets the local dev database and then runs every test. Use it instead of `npx deepspace test run all`.
+  - `npm run test:prod` now also includes the presence specs. They'll pass against the live site after the next deploy.
+- **Noted for Phase 4:** the scaffold's `/ws/jobs` route lets any signed-in member enqueue jobs from the browser. When the AI jobs are added, enqueueing will be server-only, behind an authorization check.
+- **Verified:** `tsc` and `eslint` are clean. `npm run test:all` passes 8 unit and 37 Playwright tests, twice in a row.
+- **Not yet deployed.**
+
 ## 2026-11-24: Severity shown as Critical / High / Medium / Low (Design D20)
 - **What changed:** the UI now shows severity names instead of "SEV-1…4". The backend, database, and API still use 1–4 (1 = Critical, 4 = Low). No data migration was needed.
 - **Code:**

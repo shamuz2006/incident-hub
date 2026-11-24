@@ -43,6 +43,44 @@ function wsRoute(
   }
 }
 
+/** Runs one records tool against the app's RecordRoom as a trusted server call. */
+async function recordTool<T>(env: Env, tool: string, params: Record<string, unknown>): Promise<T | null> {
+  const stub = env.RECORD_ROOMS.get(env.RECORD_ROOMS.idFromName(`app:${env.DEEPSPACE_APP_ID}`))
+  try {
+    const res = await stub.fetch(
+      new Request('https://internal/api/tools/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-User-Id': env.OWNER_USER_ID, 'X-App-Action': 'true' },
+        body: JSON.stringify({ tool, params }),
+      }),
+    )
+    const json = (await res.json()) as { success?: boolean; data?: T }
+    return json.success ? (json.data ?? null) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * IncidentHub (Design D21): may `userId` see who is viewing this incident?
+ * Only active members of the incident's team. Fails closed on any error.
+ */
+async function canJoinIncidentPresence(env: Env, incidentId: string, userId: string): Promise<boolean> {
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(incidentId)) return false
+  const incident = await recordTool<{ record?: { data?: { teamId?: string } } }>(env, 'records.get', {
+    collection: 'incidents',
+    recordId: incidentId,
+  })
+  const teamId = incident?.record?.data?.teamId
+  if (!teamId) return false
+  const members = await recordTool<{ records?: unknown[] }>(env, 'records.query', {
+    collection: 'team_members',
+    where: { teamId, userId, status: 'active' },
+    limit: 1,
+  })
+  return (members?.records?.length ?? 0) > 0
+}
+
 type DocsYjsRole = 'admin' | 'member' | 'viewer'
 
 interface DocumentRecordForAccess {
@@ -150,6 +188,20 @@ export function registerRealtimeRoutes(app: Hono<AppContext>): void {
     ),
   )
 
+  // IncidentHub: incident presence rooms ("incident:<incidentId>") are only
+  // for members of that incident's team (Design D21). Other scopes keep the
+  // scaffold's default behaviour.
+  app.get('/ws/presence/:scopeId', async (c, next) => {
+    const scopeId = c.req.param('scopeId')
+    if (!scopeId.startsWith('incident:')) return next()
+    const token = new URL(c.req.url).searchParams.get('token')
+    const auth = token ? (await verifyJwt(jwtConfig(c.env), token)).result : null
+    if (!auth) return new Response('Unauthorized', { status: 401 })
+    if (!(await canJoinIncidentPresence(c.env, scopeId.slice('incident:'.length), auth.userId))) {
+      return new Response('Forbidden', { status: 403 })
+    }
+    return next()
+  })
   app.get(
     '/ws/presence/:scopeId',
     wsRoute((env) => env.PRESENCE_ROOMS),

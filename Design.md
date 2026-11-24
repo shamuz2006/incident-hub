@@ -248,5 +248,20 @@ The UI never shows a raw number or "SEV-n". The mapping lives in one place, `SEV
 The SDK applies the `'team'` read rule (D2) with a SQL `teamId IN (?, ?, …)` that has one variable per team the user belongs to. SQLite in Durable Objects allows at most 100 variables per query. Once a user is in about 100 teams, every read they make fails with `too many SQL variables`.
 
 - **Real users:** not realistic. A person is in a handful of teams.
-- **Test accounts:** they do hit it, because every test run creates new teams. Run `npm run test:reset` to clear the local dev database. The live site's test accounts would hit it after about 100 `test:prod` runs.
+- **Test accounts:** they do hit it, because every test run creates new teams. `npm run test:all` clears the local dev database before every full run (`npm run test:reset` clears it on its own). The live site's test accounts would hit it after about 100 `test:prod` runs.
 - **If it ever mattered:** move to one record room per team (the D2 alternative), so membership no longer goes through an `IN` list.
+
+---
+
+## D21. Presence ("who's viewing") is gated by team membership
+**Date:** 2026-11-24 · **Status:** Accepted (chosen by the user)
+
+**Context.** DeepSpace's presence route (`/ws/presence/:scopeId`) only checks that the caller is signed in, not which team they're in.
+
+| Option | Pros | Cons |
+|---|---|---|
+| **A `usePresenceRoom('incident:<id>')` room, plus a server check that the caller is an active member of that incident's team** (chosen) | Presence follows the same team isolation as all other data. Consistent with doing authorization on the server. Testable. | One record lookup per presence connection. Modifies the scaffold's WebSocket route. |
+| An ungated presence room | No server code. | A signed-in outsider who learned an incident id could see who's viewing and appear as a viewer. |
+| Team-wide "online" via `usePresence()` | No new route. | Doesn't show who is viewing *this* incident, can be up to 5 minutes stale, and the users roster is visible across teams. |
+
+**Implementation.** `src/server/realtime-routes.ts` refuses a presence connection for an `incident:*` room unless the caller's token is valid and they're an active member of the incident's team. The check is `canJoinIncidentPresence`.

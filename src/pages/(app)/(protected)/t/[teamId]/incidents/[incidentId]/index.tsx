@@ -7,12 +7,13 @@
 import type { ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import { useQuery, type RecordData } from 'deepspace'
+import { usePresenceRoom, useQuery, type RecordData } from 'deepspace'
 import { RoleBadge } from '../../../../../../../components/badges'
 import { NativeSelect } from '../../../../../../../components/form'
 import { Discussion } from '../../../../../../../components/incident/Discussion'
 import { FindingsPanel } from '../../../../../../../components/incident/FindingsPanel'
 import { IncidentHeader } from '../../../../../../../components/incident/IncidentHeader'
+import { PresenceBar } from '../../../../../../../components/incident/PresenceBar'
 import { TasksPanel } from '../../../../../../../components/incident/TasksPanel'
 import { Timeline } from '../../../../../../../components/incident/Timeline'
 import { EmptyBlock, ErrorBlock, LoadingBlock } from '../../../../../../../components/states'
@@ -37,6 +38,9 @@ export default function WarRoomPage() {
   const tasks = useQuery<Task>('tasks', { where: { incidentId } })
   const comments = useQuery<Comment>('comments', { where: { incidentId } })
   const events = useQuery<IncidentEvent>('incident_events', { where: { incidentId } })
+  // Who else has this incident open right now (team-gated on the server, Design D21).
+  const presence = usePresenceRoom(`incident:${incidentId}`)
+  const viewingIds = new Set(presence.peers.map((p) => p.userId))
 
   const incident = incidentQuery.records.find((r) => r.recordId === incidentId)
 
@@ -66,6 +70,7 @@ export default function WarRoomPage() {
         <ArrowLeft className="h-4 w-4" aria-hidden /> All incidents
       </Link>
       <IncidentHeader incident={incident} />
+      <PresenceBar peers={presence.peers} connected={presence.connected} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
@@ -81,7 +86,7 @@ export default function WarRoomPage() {
         </div>
         <aside className="space-y-6">
           <Panel title="Responders">
-            <Responders incident={incident} />
+            <Responders incident={incident} viewingIds={viewingIds} />
           </Panel>
           <Panel title="Timeline" count={events.records.length}>
             <Timeline events={events.records} />
@@ -104,7 +109,7 @@ function Panel({ title, count, children }: { title: string; count?: number; chil
 }
 
 /** The commander plus everyone responding; commanders can add teammates. */
-function Responders({ incident }: { incident: RecordData<Incident> }) {
+function Responders({ incident, viewingIds }: { incident: RecordData<Incident>; viewingIds: Set<string> }) {
   const { can, members, memberById } = useTeam()
   const run = useRunAction()
   const ids = [incident.data.commanderId, ...(incident.data.responderIds ?? [])].filter(
@@ -119,7 +124,7 @@ function Responders({ incident }: { incident: RecordData<Incident> }) {
           const member = memberById.get(id)
           return (
             <li key={id} className="flex items-center gap-2 text-sm">
-              <UserAvatar userId={id} member={member} size="sm" />
+              <UserAvatar userId={id} member={member} size="sm" ring={viewingIds.has(id)} />
               <span className="flex-1 truncate">{displayName(member)}</span>
               {id === incident.data.commanderId ? <RoleBadge role="commander" /> : <span className="text-xs text-muted-foreground">responder</span>}
             </li>
