@@ -6,7 +6,8 @@
 import { cn } from '@/lib/utils'
 import {
   ROLE_LABELS,
-  SEVERITY_LABELS,
+  SEVERITY_DESCRIPTIONS,
+  SEVERITY_NAMES,
   STATUS_LABELS,
   TASK_STATUS_LABELS,
   type IncidentStatus,
@@ -30,17 +31,19 @@ export const SEV_DOT: Record<Severity, string> = {
   4: 'bg-sev4',
 }
 
+/** Shows the severity's name (Critical/High/Medium/Low); the number stays internal. */
 export function SeverityBadge({ severity, className }: { severity: Severity; className?: string }) {
   return (
     <span
-      title={SEVERITY_LABELS[severity]}
+      title={SEVERITY_DESCRIPTIONS[severity]}
       className={cn(
-        'inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[11px] font-semibold ring-1 ring-inset',
+        // Fixed min width keeps titles aligned in lists despite different word lengths.
+        'inline-flex min-w-[4.25rem] items-center justify-center rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset',
         SEV_STYLES[severity],
         className,
       )}
     >
-      SEV-{severity}
+      {SEVERITY_NAMES[severity]}
     </span>
   )
 }

@@ -6,7 +6,7 @@ import { Button, DialogTitle, Input, Modal, Textarea } from '@/components/ui'
 import { Field, NativeSelect } from './form'
 import { InlineError } from './states'
 import { callAction, newOpId } from '../lib/actions'
-import { SEVERITIES, SEVERITY_LABELS, type Severity } from '../lib/domain'
+import { SEVERITIES, SEVERITY_DESCRIPTIONS, SEVERITY_NAMES, type Severity } from '../lib/domain'
 import { incidentPath } from '../lib/navigation'
 
 export function DeclareIncidentDialog({ teamId, open, onClose }: { teamId: string; open: boolean; onClose: () => void }) {
@@ -64,7 +64,7 @@ export function DeclareIncidentDialog({ teamId, open, onClose }: { teamId: strin
               <NativeSelect {...p} value={severity} onChange={(e) => setSeverity(Number(e.target.value) as Severity)}>
                 {SEVERITIES.map((s) => (
                   <option key={s} value={s}>
-                    SEV-{s} — {SEVERITY_LABELS[s].split(' — ')[0]}
+                    {SEVERITY_NAMES[s]} — {SEVERITY_DESCRIPTIONS[s]}
                   </option>
                 ))}
               </NativeSelect>

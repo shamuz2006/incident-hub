@@ -16,6 +16,7 @@ import { EmptyBlock, ErrorBlock, LoadingBlock } from '../../../../../components/
 import {
   INCIDENT_STATUSES,
   SEVERITIES,
+  SEVERITY_NAMES,
   STATUS_LABELS,
   incidentKey,
   type Incident,
@@ -121,7 +122,7 @@ export default function DashboardPage() {
                       <option value="all">All severities</option>
                       {SEVERITIES.map((s) => (
                         <option key={s} value={s}>
-                          SEV-{s}
+                          {SEVERITY_NAMES[s]}
                         </option>
                       ))}
                     </NativeSelect>
@@ -255,7 +256,7 @@ function SeverityDistribution({ incidents }: { incidents: RecordData<Incident>[]
         <div key={s} className="rounded-lg border border-border bg-card px-4 py-3">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className={cn('h-2 w-2 rounded-full', SEV_DOT[s])} aria-hidden />
-            SEV-{s}
+            {SEVERITY_NAMES[s]}
           </div>
           <p className="mt-1 text-2xl font-semibold tabular-nums" data-testid={`sev-count-${s}`}>
             {n}

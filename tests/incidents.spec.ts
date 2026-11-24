@@ -20,7 +20,7 @@ test('incident lifecycle: declare, investigate, assign, complete, resolve', asyn
   const teamId = await setupTeam(alice.page, [{ page: bob.page, role: 'responder' }])
   await bob.page.reload() // pick up the team he just joined (Design D12)
 
-  // Alice declares a SEV-1. Numbers start at INC-1 per team.
+  // Alice declares a Critical (severity 1) incident. Numbers start at INC-1 per team.
   const created = await actOk<{ incidentId: string; number: number }>(alice.page, 'createIncident', {
     teamId,
     opId: opId(),
@@ -111,7 +111,7 @@ test('severity changes and numbering', async ({ users }) => {
   })
   expect([first.number, second.number]).toEqual([1, 2])
 
-  // Escalate SEV-3 → SEV-2 and change details in one update: one version bump.
+  // Escalate Medium (3) → High (2) and change details in one update: one version bump.
   const res = await actOk<{ version: number }>(alice.page, 'updateIncident', {
     incidentId: first.incidentId, opId: opId(), expectedVersion: 1, severity: 2, service: 'search',
   })

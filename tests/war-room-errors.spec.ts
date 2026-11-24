@@ -98,6 +98,6 @@ test('a conflicting edit shows a toast and keeps the other commander’s change'
 
   await alice.page.getByLabel('Severity').selectOption('4')
   await expect(alice.page.getByText('Someone else updated this just now.')).toBeVisible({ timeout: 15_000 })
-  // The live value is the winning edit (SEV-1), not the rejected SEV-4.
+  // The live value is the winning edit (Critical = 1), not the rejected Low = 4.
   await expect(alice.page.getByLabel('Severity')).toHaveValue('1')
 })

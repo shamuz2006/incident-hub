@@ -32,6 +32,8 @@ test('invalid input is rejected and nothing is created', async ({ users }) => {
     { title: 'Valid title', severity: 5 },
     { title: 'Valid title', severity: 1.5 },
     { title: 'Valid title', severity: '1' },
+    // Display names are UI-only; the API only accepts the numbers 1–4 (Design D20).
+    { title: 'Valid title', severity: 'Critical' },
     { title: 'Valid title' },
   ]
   for (const params of bad) {
@@ -87,7 +89,7 @@ test('roles are enforced: observers read only, responders cannot command', async
   expect(await act(alice.page, 'createTask', { incidentId, opId: opId(), title: 'For Carol', assigneeId: carol.userId })).toMatchObject({ code: 'invalid_input' })
   expect(await act(alice.page, 'createTask', { incidentId, opId: opId(), title: 'For nobody', assigneeId: 'nobody123' })).toMatchObject({ code: 'invalid_input' })
 
-  // Nothing changed: incident still SEV-2 / open, task still to-do.
+  // Nothing changed: incident still High (2) / open, task still to-do.
   await alice.page.reload()
   expect((await rows(alice.page, 'incidents', (r) => r.id === incidentId))[0]).toMatchObject({ severity: 2, status: 'open', version: 1 })
   expect((await rows(alice.page, 'tasks', (r) => r.id === taskId))[0]).toMatchObject({ status: 'todo' })
@@ -119,7 +121,7 @@ test('stale edits conflict instead of overwriting', async ({ users }) => {
 
   // Two commanders both read version 1. The first wins…
   await actOk(alice.page, 'updateIncident', { incidentId, opId: opId(), expectedVersion: 1, severity: 1 })
-  // …the second is told to check the latest rather than silently overwriting SEV-1.
+  // …the second is told to check the latest rather than silently overwriting Critical (1).
   const stale = await act(alice.page, 'updateIncident', { incidentId, opId: opId(), expectedVersion: 1, severity: 4 })
   expect(stale).toMatchObject({ success: false, code: 'conflict' })
   expect(stale.success === false && stale.error).toMatch(/Someone else updated this/)

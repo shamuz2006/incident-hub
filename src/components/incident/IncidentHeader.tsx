@@ -13,6 +13,7 @@ import { newOpId, useRunAction } from '../../lib/actions'
 import {
   INCIDENT_STATUSES,
   SEVERITIES,
+  SEVERITY_NAMES,
   STATUS_LABELS,
   incidentKey,
   type Incident,
@@ -58,14 +59,14 @@ export function IncidentHeader({ incident }: { incident: RecordData<Incident> })
           <>
             <NativeSelect
               aria-label="Severity"
-              className="h-8 w-auto font-mono text-xs"
+              className="h-8 w-auto text-xs"
               value={data.severity}
               disabled={busy}
               onChange={(e) => update({ severity: Number(e.target.value) as Severity }, 'Could not change severity')}
             >
               {SEVERITIES.map((s) => (
                 <option key={s} value={s}>
-                  SEV-{s}
+                  {SEVERITY_NAMES[s]}
                 </option>
               ))}
             </NativeSelect>

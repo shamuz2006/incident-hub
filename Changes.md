@@ -4,6 +4,32 @@ Major changes, newest first. Each entry says what changed, where, and how it was
 
 ---
 
+## 2026-11-24: Severity shown as Critical / High / Medium / Low (Design D20)
+- **What changed:** the UI now shows severity names instead of "SEV-1…4". The backend, database, and API still use 1–4 (1 = Critical, 4 = Low). No data migration was needed.
+- **Code:**
+  - `src/lib/domain.ts`: `SEVERITY_LABELS` was replaced by `SEVERITY_NAMES` (1 → Critical, 2 → High, 3 → Medium, 4 → Low) and `SEVERITY_DESCRIPTIONS` (one-line explanations).
+  - `src/components/badges.tsx`: `SeverityBadge` shows the name, with the description as a tooltip and a fixed minimum width so lists stay aligned.
+  - `src/components/incident/IncidentHeader.tsx` (severity dropdown), `src/components/DeclareIncidentDialog.tsx` ("Critical — Major production outage"), and `t/[teamId]/dashboard.tsx` (counters and the severity filter) all use the names.
+  - `src/actions/incidents.ts`: timeline text now reads "declared INC-1 (Critical): …" and "changed severity Critical → High". Older events keep their original wording, since the timeline is append-only.
+  - Comments in `src/schemas/incident-schemas.ts` and `src/styles.css` were updated.
+- **Tests:**
+  - New `src/lib/domain.test.ts` (unit) checks the 1–4 → name mapping and that there are no gaps.
+  - `tests/war-room.spec.ts`:
+    - the timeline shows "(Critical)";
+    - the dropdown value is `1` while its label shows "Critical";
+    - the dashboard shows names and no "SEV-";
+    - a Critical → High change shows by name for Bob and on the timeline.
+  - `tests/incident-errors.spec.ts`: the API rejects `severity: "Critical"`, since names are UI-only.
+  - Test comments were updated to the new names.
+- **Docs:** Design D20, plus a new "Known limitation" entry in `Design.md`.
+- **Finding while running the tests:**
+  - Every Playwright test failed with `too many SQL variables`. Test accounts had joined more than 100 teams across runs, and the SDK's `'team'` rule builds a SQL `IN (…)` list with one variable per team. SQLite allows 100.
+  - Real users won't hit this. It's documented as a known limitation.
+  - The local dev database (test data only) was moved to a backup in the session scratchpad rather than deleted.
+  - Added `npm run test:reset` to clear it next time.
+- **Verified:** `tsc` and `eslint` are clean. `npx deepspace test run all` passes 8 unit and 34 Playwright tests, twice in a row.
+- **Not yet deployed:** the live site still shows "SEV-n" until the next deploy. `npm run test:prod` will fail its new name assertions until then.
+
 ## 2026-11-24: First deploy, live at https://incident-hub.app.space
 - `npx deepspace status` confirmed `sourceInference: github` and a clean tree. The deploy then claimed GitHub `shamuz2006/incident-hub` as the source (Design D1) and confirmed both the edge and the data plane.
 - **HTTP smoke test of the live site:**

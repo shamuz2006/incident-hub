@@ -59,7 +59,7 @@
   --color-info: #3b82f6;
   --color-info-foreground: #ffffff;
 
-  /* IncidentHub severity palette — constant across themes so SEV colors
+  /* IncidentHub severity palette — constant across themes so severity colors
      always mean the same thing. Used as bg-sev1/text-sev1/border-sev1 etc. */
   --color-sev1: #ef4444;
   --color-sev2: #f97316;

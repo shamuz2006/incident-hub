@@ -31,14 +31,27 @@ export const ROLE_DESCRIPTIONS: Record<TeamRole, string> = {
 
 // ── Incidents ────────────────────────────────────────────────────────────────
 
+/**
+ * Severity is stored and sent to the server as a number, 1 (most severe) to 4.
+ * The UI never shows the number: it shows SEVERITY_NAMES (Design D20).
+ */
 export const SEVERITIES = [1, 2, 3, 4] as const
 export type Severity = (typeof SEVERITIES)[number]
 
-export const SEVERITY_LABELS: Record<Severity, string> = {
-  1: 'Critical — major production outage',
-  2: 'High — significant degradation',
-  3: 'Medium — limited functionality affected',
-  4: 'Low — minor issue',
+/** Display name for each severity level. */
+export const SEVERITY_NAMES: Record<Severity, string> = {
+  1: 'Critical',
+  2: 'High',
+  3: 'Medium',
+  4: 'Low',
+}
+
+/** One-line explanation of each level (tooltips, the declare dialog). */
+export const SEVERITY_DESCRIPTIONS: Record<Severity, string> = {
+  1: 'Major production outage',
+  2: 'Significant service degradation',
+  3: 'Limited functionality affected',
+  4: 'Minor issue with limited impact',
 }
 
 export const INCIDENT_STATUSES = ['open', 'investigating', 'identified', 'monitoring', 'resolved'] as const

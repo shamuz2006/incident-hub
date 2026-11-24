@@ -23,6 +23,7 @@ import { z } from 'zod'
 import type { ActionTools } from 'deepspace/worker'
 import {
   INCIDENT_STATUSES,
+  SEVERITY_NAMES,
   STATUS_LABELS,
   TASK_PRIORITIES,
   TASK_STATUSES,
@@ -51,7 +52,7 @@ import {
   type Rec,
 } from './lib'
 
-/** SEV-1 (most severe) to SEV-4. */
+/** 1 (Critical, most severe) to 4 (Low). The UI shows names; the API uses numbers. */
 const severitySchema = z
   .number({ error: 'Severity must be 1, 2, 3, or 4' })
   .int('Severity must be 1, 2, 3, or 4')
@@ -119,7 +120,7 @@ export const createIncident = defineAction(
       incidentId,
       actorId: userId,
       type: 'incident_created',
-      description: `${await memberName(tools, params.teamId, userId)} declared ${incidentKey(number)} as SEV-${params.severity}: ${params.title}`,
+      description: `${await memberName(tools, params.teamId, userId)} declared ${incidentKey(number)} (${SEVERITY_NAMES[params.severity]}): ${params.title}`,
       metadata: { severity: params.severity },
     })
     return ok({ incidentId, number })
@@ -160,7 +161,7 @@ export const updateIncident = defineAction(
       patch.severity = params.severity
       events.push({
         type: 'severity_changed',
-        description: `${actor} changed severity SEV-${current.severity} → SEV-${params.severity}`,
+        description: `${actor} changed severity ${SEVERITY_NAMES[current.severity]} → ${SEVERITY_NAMES[params.severity]}`,
         metadata: { from: current.severity, to: params.severity },
       })
     }

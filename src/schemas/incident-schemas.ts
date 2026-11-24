@@ -33,7 +33,7 @@ export const incidentsSchema: CollectionSchema = {
     num('number', { required: true, immutable: true }),
     text('title', { required: true, maxLength: 160 }),
     text('description', { maxLength: 5000 }),
-    num('severity', { required: true }), // 1..4 (SEV-1 is most severe)
+    num('severity', { required: true }), // 1..4: 1 = Critical (most severe), 4 = Low. UI shows names (Design D20)
     text('status', { required: true }), // see INCIDENT_STATUSES
     text('service', { maxLength: 80 }),
     text('commanderId'),

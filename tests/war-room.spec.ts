@@ -1,6 +1,6 @@
 /**
  * War room in two browsers — the PRD demo workflow (steps 1–9, 12):
- * Alice declares a SEV-1, Bob submits a finding that Alice sees live, Alice
+ * Alice declares a Critical incident, Bob submits a finding that Alice sees live, Alice
  * assigns Bob a task, Bob completes it, both timelines update, Alice resolves.
  */
 import { test, expect } from 'deepspace/testing'
@@ -12,7 +12,7 @@ test('two responders collaborate on an incident in real time', async ({ users })
   await bob.page.goto('/debug-records')
   const teamId = await setupTeam(alice.page, [{ page: bob.page, role: 'responder' }], `War Room ${Date.now().toString(36)}`)
 
-  // 1–2. Alice declares a SEV-1 from the dashboard and lands in the war room.
+  // 1–2. Alice declares a Critical incident from the dashboard and lands in the war room.
   await alice.page.goto(`/t/${teamId}/dashboard`)
   await alice.page.getByRole('button', { name: 'Declare incident' }).click()
   const dialog = alice.page.getByRole('dialog')
@@ -22,12 +22,19 @@ test('two responders collaborate on an incident in real time', async ({ users })
   await dialog.getByRole('button', { name: 'Declare incident' }).click()
   await expect(alice.page).toHaveURL(/\/incidents\/inc_/, { timeout: 15_000 })
   await expect(alice.page.getByTestId('incident-title')).toHaveText('Checkout API returning 500s')
+  // Severity is shown by name, never as a number (Design D20).
+  await expect(alice.page.getByTestId('timeline')).toContainText('declared INC-1 (Critical)')
+  await expect(alice.page.getByLabel('Severity')).toHaveValue('1')
+  await expect(alice.page.getByLabel('Severity').locator('option:checked')).toHaveText('Critical')
   const warRoomPath = new URL(alice.page.url()).pathname
 
   // 3–4. Bob sees it on his dashboard (live) and opens the same war room.
   await bob.page.goto(`/t/${teamId}/dashboard`)
   await expect(bob.page.getByTestId('incident-list')).toContainText('Checkout API returning 500s', { timeout: 15_000 })
   await expect(bob.page.getByTestId('sev-count-1')).toHaveText('1')
+  await expect(bob.page.getByTestId('severity-distribution')).toContainText('Critical')
+  await expect(bob.page.getByTestId('incident-list')).toContainText('Critical')
+  await expect(bob.page.getByTestId('incident-list')).not.toContainText('SEV-')
   await bob.page.getByRole('link', { name: /Checkout API returning 500s/ }).click()
   await expect(bob.page).toHaveURL(new RegExp(`${warRoomPath}$`))
 
@@ -61,6 +68,11 @@ test('two responders collaborate on an incident in real time', async ({ users })
   await alice.page.getByLabel('Status', { exact: true }).selectOption('identified')
   await expect(bob.page.getByText('Identified', { exact: true })).toBeVisible({ timeout: 15_000 })
   await expect(bob.page.getByTestId('timeline')).toContainText('Open → Identified')
+
+  // Downgrade Critical → High: Bob (read-only badge) and the timeline show names.
+  await alice.page.getByLabel('Severity').selectOption({ label: 'High' })
+  await expect(bob.page.getByTestId('timeline')).toContainText('changed severity Critical → High', { timeout: 15_000 })
+  await expect(bob.page.getByText('High', { exact: true })).toBeVisible()
 
   // 12. Alice resolves (with confirmation); Bob sees it resolved.
   await alice.page.getByRole('button', { name: 'Resolve' }).click()
